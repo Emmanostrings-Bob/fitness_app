@@ -7,32 +7,53 @@ const SearchExercises = ({ setExercises, bodyPart, setBodyPart}) => {
   const [search, setSearch] = useState('');
   const [bodyParts, setBodyParts] = useState([])
 
-  useEffect(() => {
-   const fetchExercisesData = async () => {
-    const bodyPartsData = await fetchData('https://exercisedb.p.rapidapi.com/exercises/bodyPartList', exerciseOptions)
-
-    setBodyParts(['all', ...bodyPartsData])
-   }
+  
+  const fetchExercisesData = async () => {
+    try {
+      const bodyPartsData = await fetchData('https://exercisedb.p.rapidapi.com/exercises/bodyPartList', exerciseOptions);
+      setBodyParts(['all', ...bodyPartsData]);
+    } catch (error) {
+      if (error.response && error.response.status === 429) {
+        // Handle the "429 Too Many Requests" error by waiting and retrying
+        setTimeout(() => {
+          fetchExercisesData();
+        }, 5000); // Wait for 5 seconds before retrying (adjust as needed).
+      } else {
+        console.error('API Error:', error);
+        // Handle other types of errors (e.g., display an error message to the user).
+      }
+    }
+  };
+   useEffect(() => {
    fetchExercisesData();
   }, [])
   
 
-  const handleSearch = async() => {
-    if(search) {
-      const exercisesData = await fetchData
-      ('https://exercisedb.p.rapidapi.com/exercises', exerciseOptions);
-
-      const searchExercises = exercisesData.filter(
-        (exercise) => exercise.name.toLowerCase().includes(search) 
-        || exercise.target?.toLowerCase().includes(search)
-        || exercise.equipment?.toLowerCase().includes(search)
-        || exercise.bodypart?.toLowerCase().includes(search)
-      );
-      setSearch('');
-      setExercises(searchExercises)
+  const handleSearch = async () => {
+    if (search) {
+      try {
+        const exercisesData = await fetchData('https://exercisedb.p.rapidapi.com/exercises', exerciseOptions);
+  
+        // Ensure exercisesData is an array before filtering
+        if (Array.isArray(exercisesData)) {
+          const searchExercises = exercisesData.filter(
+            (exercise) =>
+              exercise.name.toLowerCase().includes(search) ||
+              (exercise.target?.toLowerCase()?.includes(search) ||
+                exercise.equipment?.toLowerCase()?.includes(search) ||
+                exercise.bodypart?.toLowerCase()?.includes(search))
+          );
+  
+          setSearch('');
+          setExercises(searchExercises);
+        } else {
+          console.error('API returned unexpected data format:', exercisesData);
+        }
+      } catch (error) {
+        console.error('API Error:', error);
+      }
     }
-  }
-
+  };
   return (
     <Stack alignItems='center' mt='37px' justifyContent='center' p='20px'>
       <Typography fontWeight={700} sx={{
